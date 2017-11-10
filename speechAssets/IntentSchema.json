@@ -1,0 +1,26 @@
+{
+    "intents": [
+      {
+        "intent": "BSDIntent",
+        "slots": [
+          {
+            "name": "value",
+            "type": "AMAZON.NUMBER"
+          },
+          {
+            "name": "date",
+            "type": "AMAZON.DATE"
+          }
+        ]
+      },
+      {
+        "intent": "AMAZON.StopIntent"
+      },
+      {
+        "intent": "AMAZON.CancelIntent"
+      },
+      {
+        "intent": "AMAZON.HelpIntent"
+      }
+    ]
+  }

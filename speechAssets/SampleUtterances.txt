@@ -1,0 +1,4 @@
+BSDIntent B.S.D. for {value} on {date}
+BSDIntent buyer stamp duty for {value} on {date}
+BSDIntent calculate B.S.D. for {value} on {date}
+BSDIntent calculate buyer stamp duty for {value} on {date}
