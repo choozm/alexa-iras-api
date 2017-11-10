@@ -7,9 +7,12 @@ For additional samples, visit the Alexa Skills Kit Getting Started guide at
 http://amzn.to/1LGWsLG
 """
 
-#from __future__ import print_function
 import http.client
 import json
+
+CLIENT_ID = "<enter IRAS API App client ID>"
+SECRET = "<enter IRAS API App client secret>"
+API_URL = "apiservices.iras.gov.sg"
 
 # --------------- Helpers that build all of the responses ----------------------
 
@@ -107,18 +110,14 @@ def calculate_bsd(intent, session):
 # --------------- Functions that interact with IRAS API ------------------
 
 def get_bsd(value, date):
-    client_id = "<enter IRAS API App client ID>"
-    secret = "<enter IRAS API App client secret>"
-    api_url = "apiservices.iras.gov.sg"
-
-    conn = http.client.HTTPSConnection(api_url)
+    conn = http.client.HTTPSConnection(API_URL)
     headers = {
-        'x-ibm-client-id': client_id,
-        'x-ibm-client-secret': secret,
+        'x-ibm-client-id': CLIENT_ID,
+        'x-ibm-client-secret': SECRET,
         'content-type': "application/json",
         'accept': "application/json"
         }
-    payload = "{\"client_id\":\"%s\",\"value\":%s,\"documentDate\":\"%s\"}" % (client_id, value, date)
+    payload = "{\"client_id\":\"%s\",\"value\":%s,\"documentDate\":\"%s\"}" % (CLIENT_ID, value, date)
     result = None
 
     conn.request("POST", "/iras/prod/SD/CalPropertyBSD", payload, headers)
