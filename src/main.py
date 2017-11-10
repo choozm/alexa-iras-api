@@ -75,7 +75,7 @@ def calculate_bsd(intent, session):
     user.
     """
 
-    card_title = intent['BuyerStampDuty']
+    card_title = intent['name']
     session_attributes = {}
     should_end_session = False
 
