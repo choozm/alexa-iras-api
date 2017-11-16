@@ -1,0 +1,2 @@
+BSDIntent {date} の {value} の 印紙税はどれくらいですか
+BSDIntent {date} の {value} の 印紙税はいくらですか
