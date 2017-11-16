@@ -15,8 +15,8 @@ API_URL = "apiservices.iras.gov.sg"
 def build_speechlet_response(title, output, reprompt_text, should_end_session):
     return {
         'outputSpeech': {
-            'type': 'PlainText',
-            'text': output
+            'type': 'SSML',
+            'ssml': output
         },
         'card': {
             'type': 'Simple',
@@ -40,44 +40,85 @@ def build_response(session_attributes, speechlet_response):
         'response': speechlet_response
     }
 
+def build_speech_text(reply_or_reprompt, clear_or_unclear, locale='en-US'):
+    
+    dic =   {'reply':   { 'clear':  { 'en-US': "<speak>The buyer stamp duty for %s dollars on %s is. %s.</speak>" 
+                                    , 'ja-JP': "<speak><say-as interpret-as='interjection'>あのう.</say-as> %sドルの%sの印紙税は. %sです.</speak>"
+                                    }
+                        , 'unclear':{ 'en-US': "I'm not sure what your question is. Please try again."
+                                    , 'ja-JP': "<speak>わかりません. もう一度お試しください.</speak>"
+                                    }
+                        }
+            ,'reprompt': { 'clear': { 'en-US': "You can ask me about buyer stamp duty by saying, buyer stamp duty for 500000 on 26 October 2016."
+                                    , 'ja-JP': "あなたは私に'昨日の500000の印紙税はいくらですか'尋ねることができます."
+                                    }
+                        , 'unclear':{ 'en-US': "I'm not sure what your question is. You can ask me about buyer stamp duty by saying, buyer stamp duty for 500000 on 26 October 2016."
+                                    , 'ja-JP': "わかりません. もう一度お試しください."
+                                    }
+                        }
+            }
+
+    if reply_or_reprompt in dic and clear_or_unclear in dic[reply_or_reprompt] \
+            and locale in dic[reply_or_reprompt][clear_or_unclear]:
+        return dic[reply_or_reprompt][clear_or_unclear][locale]
+    else:
+        return None
+
+
 
 # --------------- Functions that control the skill's behavior ------------------
 
-def get_welcome_response():
+def get_welcome_response(request):
     """ If we wanted to initialize the session to have some attributes we could
     add those here
     """
 
     session_attributes = {}
     card_title = "Welcome"
-    speech_output = "Hello. You can ask me about buyer stamp duty by saying, " \
-                    "buyer stamp duty for 500000 on 26 October 2016."
+    speech_output = "<speak>Hello. You can ask me about buyer stamp duty by saying, " \
+                    "buyer stamp duty for 500000 on 26 October 2016.</speak>"
     # If the user either does not reply to the welcome message or says something
     # that is not understood, they will be prompted again with this text.
     reprompt_text = "You can ask me about buyer stamp duty by saying, " \
                     "buyer stamp duty for 500000 on 26 October 2016."
+                    
     should_end_session = False
+
+    if request and request['locale'] == "ja-JP":
+        speech_output = "<speak><say-as interpret-as='interjection'>こんにちは.</say-as> あなたは私に'昨日の500000の印紙税はいくらですか'尋ねることができます.</speak>"
+        reprompt_text = "もう一度お試しください"
+    
     return build_response(session_attributes, build_speechlet_response(
         card_title, speech_output, reprompt_text, should_end_session))
 
 
-def handle_session_end_request():
+def handle_session_end_request(request):
     card_title = "Session Ended"
-    speech_output = "Good bye, and remember to pay your tax on time!"
+    
+    speech_output = "<speak>Good bye, and remember to pay your tax on time!</speak>"
+
+    if request and request['locale'] == "ja-JP":
+        speech_output = "<speak><say-as interpret-as='interjection'>じゃね.</say-as></speak>"
+
     # Setting this to true ends the session and exits the skill.
     should_end_session = True
     return build_response({}, build_speechlet_response(
         card_title, speech_output, None, should_end_session))
 
-def calculate_bsd(intent, session):
+
+def calculate_bsd(intent_request, session):
     """ Sets the color in the session and prepares the speech to reply to the
     user.
     """
 
+    intent = intent_request['intent']
+    locale = intent_request['locale']
+    
     card_title = intent['name']
     session_attributes = {}
     should_end_session = False
 
+    bsd = None
     if 'value' in intent['slots'] and 'date' in intent['slots']:
         value = intent['slots']['value']['value']
         date = intent['slots']['date']['value']
@@ -86,19 +127,13 @@ def calculate_bsd(intent, session):
         result = get_bsd(value, date)
         if result != "error" and result['returnCode'] == 10:
             bsd = result['data']
-        else:
-            bsd = "error"
-        
-        speech_output = "The buyer stamp duty for " + \
-                        value + " dollars on " + date + " is. " + str(bsd)
-        reprompt_text = "You can ask me about buyer stamp duty by saying, " \
-                        "buyer stamp duty for 500000 on 26 October 2016."
+
+    if bsd:
+        speech_output = build_speech_text('reply', 'clear', locale) % (value, date, str(bsd))
+        reprompt_text = build_speech_text('reprompt', 'clear', locale)
     else:
-        speech_output = "I'm not sure what your question is. " \
-                        "Please try again."
-        reprompt_text = "I'm not sure what your question is. " \
-                        "You can ask me about buyer stamp duty by saying, " \
-                        "buyer stamp duty for 500000 on 26 October 2016."
+        speech_output = build_speech_text('reply', 'unclear', locale)
+        reprompt_text = build_speech_text('reprompt', 'unclear', locale)
 
     return build_response(session_attributes, build_speechlet_response(
         card_title, speech_output, reprompt_text, should_end_session))
@@ -144,7 +179,7 @@ def on_launch(launch_request, session):
     print("on_launch requestId=" + launch_request['requestId'] +
           ", sessionId=" + session['sessionId'])
     # Dispatch to your skill's launch
-    return get_welcome_response()
+    return get_welcome_response(launch_request)
 
 
 def on_intent(intent_request, session):
@@ -158,11 +193,11 @@ def on_intent(intent_request, session):
 
     # Dispatch to your skill's intent handlers
     if intent_name == "BSDIntent":
-        return calculate_bsd(intent, session)
+        return calculate_bsd(intent_request, session)
     elif intent_name == "AMAZON.HelpIntent":
-        return get_welcome_response()
+        return get_welcome_response(intent_request)
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
-        return handle_session_end_request()
+        return handle_session_end_request(intent_request)
     else:
         raise ValueError("Invalid intent")
 
